@@ -1,0 +1,23 @@
+1. 	1871 - 2016
+
+2.	Eddie Gaedel is the shortest player in the database at 43" (3' 7").  He played one game, for the St. Louis Browns.
+
+3.	Of Vanderbilt alumni, David Price made the most money in the major leagues, with total earnings of almost $82M
+
+4.	See script
+
+5.	See script for numbers per decade.
+	The number of both strikeouts and home runs per game have been steadily rising since the 1920s
+
+6.	Chris Owings had the highest rate of successful base stealing, with 91% of his attemps resulting in a stolen base
+
+7.	The Seattle Mariners had the most wins for a year they did not win the world series during that period, with 116 wins in 2001
+	The LA Dodgers had only 63 wins when they won the world series in 1981 due to a players' strike that caused a two-month break in regular season games.
+	Excluding 1981, the fewest wins for a WS champion was the St. Louis Cardinals, with 83 wins in 2006
+	 For the given period, the world series winner had the most number of wins in the season (or tied for most) 26% of the time.
+
+8.	See script
+
+
+
+10.	See script

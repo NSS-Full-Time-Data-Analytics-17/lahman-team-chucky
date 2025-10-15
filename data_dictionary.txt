@@ -784,7 +784,7 @@ park.name       name of ballpark
 park.alias      alternate names of ballpark
 city            city
 state           state 
-country			country
+country		country
 
 ------------------------------------------------------------------------------
 2.27 HomeGames table
