@@ -164,6 +164,34 @@ LIMIT 5
 ;
 
 
+-- 9. Which managers have won the TSN Manager of the Year award in both the National League (NL) and the American League (AL)? 
+	-- Give their full name and the teams that they were managing when they won the award.
+
+WITH dual_winners AS
+	(
+	(SELECT playerid
+	FROM awardsmanagers
+	WHERE awardid = 'TSN Manager of the Year'
+		AND lgid = 'AL')
+	
+	INTERSECT
+	
+	(SELECT playerid
+	FROM awardsmanagers
+	WHERE awardid = 'TSN Manager of the Year'
+		AND lgid = 'NL')
+	)
+
+SELECT DISTINCT namefirst, namelast, a.lgid, name
+FROM dual_winners LEFT JOIN awardsmanagers AS a USING(playerid)
+				  LEFT JOIN people USING(playerid)
+				  LEFT JOIN managers USING(playerid, yearid)
+				  LEFT JOIN teams USING(teamid, yearid)
+WHERE awardid = 'TSN Manager of the Year'
+ORDER BY namelast
+;
+
+
 -- 10. Find all players who hit their career highest number of home runs in 2016. Consider only players who have played in the league for at least 10 years, 
 	-- and who hit at least one home run in 2016. Report the players' first and last names and the number of home runs they hit in 2016.
 
