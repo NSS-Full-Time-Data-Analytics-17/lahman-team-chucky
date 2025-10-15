@@ -242,12 +242,13 @@ salary_rank AS(
 		WHERE yearid >=2000
 	GROUP BY teamid,yearid)
 
-SELECT  r.yearid,name,total_season_wins,season_win_rank,total_season_salary,salary_season_rank
+SELECT  name,r.yearid,total_season_wins,season_win_rank,total_season_salary,salary_season_rank
 FROM rank_wins AS r
 	INNER JOIN salary_rank AS s
 		ON r.teamid = s.teamid
 		AND r.yearid = s.yearid
-WHERE season_win_rank =1;
+GROUP BY name,r.yearid,total_season_wins,season_win_rank,total_season_salary,salary_season_rank
+ORDER BY name,r.yearid;
 
 -- Q 12. In this question, you will explore the connection between number of wins and attendance.
 	-- Does there appear to be any correlation between attendance at home games and number of wins?
@@ -265,12 +266,13 @@ WHERE season_win_rank =1;
 			WHERE yearid >=1995
 		GROUP BY teamid,name,yearid)
 		
-		SELECT  r.yearid,name,total_season_wins,season_win_rank,total_season_attendance,season_attendance_rank
+		SELECT name, r.yearid,total_season_wins,season_win_rank,total_season_attendance,season_attendance_rank	
 		FROM rank_wins AS r
 			INNER JOIN attendance_rank AS a
 				ON r.teamid = a.teamid
 				AND r.yearid = a.yearid
-			WHERE season_win_rank =1;
+		GROUP BY name,r.yearid,total_season_wins,season_win_rank,total_season_attendance,season_attendance_rank
+		ORDER BY name, r.yearid;
 			
 	-- Do teams that win the world series see a boost in attendance the following year?
 	
