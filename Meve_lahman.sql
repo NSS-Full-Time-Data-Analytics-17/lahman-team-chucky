@@ -1,19 +1,22 @@
---1
+--1 date range of baseball games in the data 
 SELECT
 	MIN(yearid) AS first_year, 
 	MAX(yearid) AS last_year
 FROM teams;
 
-/*
-SELECT playerid, 
-	namelast, 
-	namefirst, 
-	height
-FROM people
-INNER JOIN 
-ORDER BY height */
+---2 the shortest player and his team 
+SELECT p.playerid, 
+	p.namelast, 
+	p.namefirst, 
+	p.height,
+	t.name
+FROM people As p 
+LEFT JOIN appearances AS c USING (playerid)
+LEFT JOIN teams AS t USING (teamid, yearid)
+ORDER BY height 
+LIMIT 1;
 
---- 3
+--- 3 highest player who played for Vanderbilt and and earned to most money 
 SELECT p.namefirst,
 		p.namelast,
 		s.schoolname,
@@ -28,8 +31,8 @@ GROUP BY  p.namefirst,
 		s.schoolname
 LIMIT 1;
 
-/*4
-WITH positions_group AS( 
+---4
+WITH positions_table AS( 
 SELECT yearid, po,
 	CASE 
 		WHEN pos = 'OF' THEN 'outfield'
@@ -39,12 +42,14 @@ SELECT yearid, po,
 FROM fielding 
 WHERE yearid = 2016
 )
-SELECT postions_group, yearid,
-	SUM(po) AS total_po 
-FROM positions_group
-GROUP BY positions_group, yearid; */
 
----6
+SELECT yearid,
+	positions_group,
+	SUM(po) AS total_po
+FROM positions_table
+GROUP BY yearid, positions_group; 
+
+---6 the player with the most succesfull stealing bases in 2016 and the percent rate of sucess 
 SELECT b.playerid, 
 	p.namefirst, 
 	p.namelast, 
@@ -91,8 +96,6 @@ INNER JOIN teams AS t
 	AND t.w = max_wins_not_champion
 	AND  wswin = 'Y'
 GROUP BY t.teamid, t.w;
-
---8
 --9
 WITH manager_wins AS(
 SELECT playerid
@@ -110,9 +113,9 @@ WHERE awardid = 'TSN Manager of the Year'
 SELECT p.namefirst, p.namelast, a.lgid, t.name
 FROM manager_wins AS m
 	LEFT JOIN awardsmanagers AS a USING (playerid)
-	LEFT JOIN people AS p ON m.playerid = p.playerid 
-	LEFT JOIN managers AS ms ON m.playerid = ms.playerid
-	LEFT JOIN teams AS t ON ms.teamid = t.teamid
+	LEFT JOIN people AS p USING (playerid)
+	LEFT JOIN managers AS ms USING (playerid, yearid)
+	LEFT JOIN teams AS t USING (yearid, teamid)
 WHERE a.awardid = 'TSN Manager of the Year'
 ORDER BY namelast
 --- check this ^^^^ DUPLICATES 
@@ -147,16 +150,16 @@ ORDER BY total_wins, total_salary DESC
 )
 SELECT yearid, teamid,
 	ROUND(AVG(total_salary))::money AS avg_salary,
-	ROUND(AVG(total_wins), 2) AS avg_wins,
-	CORR(total_salary, total_wins)
+	ROUND(AVG(total_wins), 2) AS avg_wins
 FROM teams
 GROUP BY yearid,teamid
 ORDER BY yearid DESC;
 
--- 
+-- 11
 
-
-
+SELECT name, w, attendance  
+FROM teams
+WHERE attendance IS NOT NULL
 
 
 
