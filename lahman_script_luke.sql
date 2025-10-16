@@ -307,8 +307,8 @@ ORDER BY name,r.yearid;
 	
 		SELECT throws,COUNT(DISTINCT playerid) AS player_count
 		FROM pitching 
-		INNER JOIN people 
-			USING (playerid)
+			INNER JOIN people 
+				USING (playerid)
 		WHERE throws ='L' OR throws = 'R'
 		GROUP BY throws;
 
@@ -316,10 +316,10 @@ ORDER BY name,r.yearid;
 	
 		SELECT throws,COUNT(DISTINCT playerid) AS player_count,awardid
 		FROM pitching
-		INNER JOIN people 
-			USING (playerid)
-		INNER JOIN awardsplayers
-			USING(playerid)
+			INNER JOIN people 
+				USING (playerid)
+			INNER JOIN awardsplayers
+				USING(playerid)
 		WHERE awardid = 'Cy Young Award' AND (throws ='L' OR throws = 'R')
 		GROUP BY throws,awardid;
 
@@ -331,7 +331,7 @@ ORDER BY name,r.yearid;
 				USING (playerid)
 			INNER JOIN halloffame 
 				USING (playerid)
-		WHERE inducted = 'Y' AND (throws ='L' OR throws = 'R')
+		WHERE inducted ='Y' AND (throws ='L' OR throws = 'R')
 		GROUP BY throws;
 	
 	
