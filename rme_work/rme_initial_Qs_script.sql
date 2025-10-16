@@ -19,16 +19,24 @@ WHERE height =
 
 -- 3. Find all players in the database who played at Vanderbilt University. Create a list showing each player’s first and last names as well as the total salary they earned in the major leagues. 
 	-- Sort this list in descending order by the total salary earned. Which Vanderbilt player earned the most money in the majors?
-
-SELECT namefirst, namelast, SUM(salary)::numeric::money AS total_salary
-FROM people LEFT JOIN salaries USING(playerid)
-WHERE playerid IN
-	(SELECT playerid FROM collegeplaying WHERE schoolid = 
+WITH Vanderbilt_alum AS 
+	-- distinct players who attended Vanderbilt university
+	(SELECT DISTINCT playerid
+	FROM collegeplaying
+	WHERE schoolid =
 		(SELECT schoolid FROM schools WHERE schoolname = 'Vanderbilt University')
-	)
-GROUP BY namefirst, namelast
+	),
+
+alum_salaries AS	
+	-- total career salaries for Vanderbilt alumni
+	(SELECT playerid, SUM(salary)::numeric::money AS total_salary
+	FROM Vanderbilt_alum INNER JOIN salaries USING(playerid)
+	GROUP BY playerid)
+
+SELECT namefirst, namelast, total_salary
+FROM people INNER JOIN alum_salaries USING(playerid)
 ORDER BY total_salary DESC NULLS LAST
-; -- Of Vanderbilt alumni, David Price made the most money in the major leagues, with total earnings of almost $82M
+;  -- Of Vanderbilt alumni, David Price made the most money in the major leagues, with total earnings of almost $82M
 
 
 /* 4. Using the fielding table, group players into three groups based on their position: label players with position OF as "Outfield", those with 
@@ -54,8 +62,8 @@ ORDER BY total_po DESC
 	-- Do the same for home runs per game. Do you see any trends?
 
 SELECT CONCAT(LEFT(yearid::text, LENGTH(yearid::text)-1), '0s') AS decade, 
-	ROUND((SUM(SO)::numeric/SUM(g)::numeric),2) AS SO_per_game,
-	ROUND((SUM(HR)::numeric/SUM(g)::numeric), 2) AS HR_per_game
+	ROUND((SUM(SO)::numeric/(SUM(g)::numeric/2)),2) AS SO_per_game,
+	ROUND((SUM(HR)::numeric/(SUM(g)::numeric/2)), 2) AS HR_per_game
 FROM teams
 WHERE yearid >= 1920
 GROUP BY CONCAT(LEFT(yearid::text, LENGTH(yearid::text)-1), '0s')
@@ -66,7 +74,7 @@ ORDER BY decade ASC
 -- 6. Find the player who had the most success stealing bases in 2016, where __success__ is measured as the percentage of stolen base attempts which are successful. 
 	-- (A stolen base attempt results either in a stolen base or being caught stealing.) Consider only players who attempted _at least_ 20 stolen bases.
 
-SELECT namefirst, namelast, (SUM(sb)*100)/(SUM(sb)+SUM(cs)) AS perc_steal_success
+SELECT namefirst, namelast, (SUM(sb)/(SUM(sb)+SUM(cs))*100 AS perc_steal_success
 FROM batting LEFT JOIN people USING(playerid)
 WHERE yearid = 2016
 GROUP BY namefirst, namelast 
@@ -138,10 +146,9 @@ WHERE yearID BETWEEN 1970 AND 2016
 
 /* 8. Using the attendance figures from the homegames table, find the teams and parks which had the top 5 average attendance per game in 2016 
 	(where average attendance is defined as total attendance divided by number of games). Only consider parks where there were at least 10 games played. 
-	Report the park name, team name, and average attendance. Repeat for the lowest 5 average attendance.
-*/
+	Report the park name, team name, and average attendance. Repeat for the lowest 5 average attendance.*/
 
---Highest attendance per game:
+--Highest attendance per (home) game:
 SELECT park_name, teams.name, h.attendance/h.games AS att_per_game
 FROM homegames AS h LEFT JOIN teams ON h.team = teams.teamid
 					LEFT JOIN parks ON h.park = parks.park
@@ -152,7 +159,7 @@ ORDER BY att_per_game DESC
 LIMIT 5
 ;
 
---Lowest attendane per game: 
+--Lowest attendane per (home) game: 
 SELECT park_name, teams.name, h.attendance/h.games AS att_per_game
 FROM homegames AS h LEFT JOIN teams ON h.team = teams.teamid
 					LEFT JOIN parks ON h.park = parks.park
@@ -168,18 +175,13 @@ LIMIT 5
 	-- Give their full name and the teams that they were managing when they won the award.
 
 WITH dual_winners AS
+	-- playerid for managers who won the award in both leagues
 	(
-	(SELECT playerid
-	FROM awardsmanagers
-	WHERE awardid = 'TSN Manager of the Year'
-		AND lgid = 'AL')
-	
+		(SELECT playerid FROM awardsmanagers
+		WHERE awardid = 'TSN Manager of the Year' AND lgid = 'AL')
 	INTERSECT
-	
-	(SELECT playerid
-	FROM awardsmanagers
-	WHERE awardid = 'TSN Manager of the Year'
-		AND lgid = 'NL')
+		(SELECT playerid FROM awardsmanagers
+		WHERE awardid = 'TSN Manager of the Year' AND lgid = 'NL')
 	)
 
 SELECT DISTINCT namefirst, namelast, a.lgid, name
@@ -198,15 +200,34 @@ ORDER BY namelast
 SELECT playerid, namefirst, namelast, hr AS hr_2016
 FROM batting AS b1 
 	LEFT JOIN 
+		-- the count of years each player appeared in the major leagues
 		(SELECT playerid, COUNT(DISTINCT yearid) AS career_years
 			FROM appearances
 			GROUP BY playerid
-		)
-		USING(playerid)
+		) USING(playerid)
 	LEFT JOIN people USING(playerid)
 WHERE yearid = 2016
-	AND hr = (SELECT MAX(hr) FROM batting AS b2 WHERE b2.playerid = b1.playerid)
+	AND hr = (SELECT MAX(hr) FROM batting AS b2 WHERE b2.playerid = b1.playerid) --the player's max hr
 	AND hr >= 1
 	AND career_years >= 10
 ORDER BY hr_2016 DESC
+;
+
+--players who strictly beat their hr record in 2016 (didn't just tie it):
+WITH hr_records AS
+	(SELECT *, RANK() OVER(PARTITION BY playerid ORDER BY hr DESC, yearid ASC) AS hr_rank
+	FROM batting),
+
+career_length AS
+	(SELECT playerid, COUNT(DISTINCT yearid) AS career_years
+	FROM appearances
+	GROUP BY playerid)
+
+SELECT playerid, namefirst, namelast, hr AS hr_2016
+FROM hr_records LEFT JOIN career_length USING(playerid)
+				LEFT JOIN people USING(playerid)
+WHERE hr_rank = 1
+	AND yearid = 2016
+	AND hr >= 1
+	AND career_years >= 10
 ;
