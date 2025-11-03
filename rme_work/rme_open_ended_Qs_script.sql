@@ -1,7 +1,7 @@
 -- 11. Is there any correlation between number of wins and team salary? Use data from 2000 and later to answer this question. 
 	-- As you do this analysis, keep in mind that salaries across the whole league tend to increase together, so you may want to look on a year-by-year basis.
 
---i.e. Do teams that pay an above average salary amount in a given year win an above average number of games that year?
+--To "eyeball" the answer, consider: Do teams that pay an above average salary amount in a given year win an above average number of games that year?
 
 WITH avg_wins AS
 	-- find the average number of wins per year
@@ -44,13 +44,15 @@ correlations AS
 --What percentage of teams experienced a positive correlation between their salary and number of wins, as compared to averages for that year?
 SELECT yearid, ROUND((correlations::numeric/num_teams::numeric)*100, 2) AS perc_teams_correlated
 FROM correlations INNER JOIN num_teams USING(yearid)
-; -- In most years, there does appear to be a slight correlation between salaries and wins. Determining the strength and nature of the correlation would require more statistics work.
+; -- In most years, there does appear to be a slight correlation between salaries and wins. 
+
+
 
 
 -- 12. In this question, you will explore the connection between number of wins and attendance. 
 	-- Does there appear to be any correlation between attendance at home games and number of wins? 
 
---Answering by: if a team wins a higher percentage of their games than the previous year, do they also have higher attendance per game?
+--To "eyeball" the answer, consider: if a team wins a higher percentage of their games than the previous year, do they also have higher attendance per game?
 WITH att_per_h_game AS
 	-- attendance per home game each year
 	(SELECT 

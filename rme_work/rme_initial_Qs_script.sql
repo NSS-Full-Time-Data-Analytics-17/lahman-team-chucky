@@ -57,11 +57,32 @@ GROUP BY pos_group
 ORDER BY total_po DESC
 ;
 
+--Alternate idea from instructor:
+SELECT
+	SUM(CASE WHEN pos = 'OF' THEN po END) AS Outfield_PO,
+	SUM(CASE WHEN pos IN ('SS', '1B', '2B', '3B') THEN po END) AS Infield_PO,
+	SUM(CASE WHEN pos IN ('P', 'C') THEN po END) AS Battery_PO
+FROM fielding
+WHERE yearid = 2016
+;
+
+--Also apparently you can group by things from a case statement in select???? (Update: that only works in PostgreSQL)
+SELECT
+	CASE WHEN pos = 'OF' THEN 'Outfield'
+		 WHEN pos IN ('SS', '1B', '2B', '3B') THEN 'Infield'
+		 WHEN pos IN ('P', 'C') THEN 'Battery'
+		 ELSE NULL END AS pos_group, 
+	SUM(po)
+FROM fielding
+WHERE yearid = 2016
+GROUP BY pos_group
+;
+
 
 -- 5. Find the average number of strikeouts per game by decade since 1920. Round the numbers you report to 2 decimal places. 
 	-- Do the same for home runs per game. Do you see any trends?
 
-SELECT CONCAT(LEFT(yearid::text, LENGTH(yearid::text)-1), '0s') AS decade, 
+SELECT CONCAT(LEFT(yearid::text, LENGTH(yearid::text)-1), '0s') AS decade, --easier to do ((yearid/10)::integer * 10)
 	ROUND((SUM(SO)::numeric/(SUM(g)::numeric/2)),2) AS SO_per_game,
 	ROUND((SUM(HR)::numeric/(SUM(g)::numeric/2)), 2) AS HR_per_game
 FROM teams
@@ -74,11 +95,10 @@ ORDER BY decade ASC
 -- 6. Find the player who had the most success stealing bases in 2016, where __success__ is measured as the percentage of stolen base attempts which are successful. 
 	-- (A stolen base attempt results either in a stolen base or being caught stealing.) Consider only players who attempted _at least_ 20 stolen bases.
 
-SELECT namefirst, namelast, (SUM(sb)/(SUM(sb)+SUM(cs))*100 AS perc_steal_success
+SELECT namefirst, namelast, ROUND((sb::numeric/(sb+cs)::numeric)*100, 2) AS perc_steal_success
 FROM batting LEFT JOIN people USING(playerid)
 WHERE yearid = 2016
-GROUP BY namefirst, namelast 
-	HAVING (SUM(sb) + SUM(cs)) >= 20
+	AND (sb+cs) >= 20
 ORDER BY perc_steal_success DESC NULLS LAST
 LIMIT 1
 ; -- Chris Owings had the highest rate of successful base stealing, with 91% of his attemps resulting in a stolen base
@@ -130,11 +150,9 @@ LIMIT 1)
 
 SELECT 
 	ROUND(
-		(COUNT(yearid)::numeric/ -- the count of WS winners who won the most games that season
-			(SELECT COUNT(*) -- the count of all WS games (indicated by presence of a winner) for the time period
-			FROM teams
-			WHERE yearID BETWEEN 1970 AND 2016
-				AND wswin = 'Y')
+		(COUNT(yearid)::numeric / -- the count of WS winners who won the most games that season
+			(SELECT COUNT(*)::numeric FROM teams -- the count of all WS games (indicated by presence of a winner) for the time period
+				WHERE yearID BETWEEN 1970 AND 2016 AND wswin = 'Y')
 		) * 100, 2
 	) AS perc_wins_with_max
 FROM teams AS t1
@@ -143,15 +161,27 @@ WHERE yearID BETWEEN 1970 AND 2016
 	AND w =	(SELECT MAX(w) FROM teams AS t2 WHERE t2.yearid = t1.yearid) -- where the team's wins that year are equal to the max wins of any team that year
 ; -- For the given period, the world series winner had the most number of wins in the season (or tied for most) 26% of the time.
 
+--Alternate from instructor:
+WITH max_wins AS (
+	SELECT yearid, MAX(w) AS max_wins
+	FROM teams
+	WHERE yearid BETWEEN 1970 AND 2016
+	GROUP BY yearid
+)
+
+SELECT ROUND((SUM(CASE WHEN w = max_wins THEN 1.0 END) / COUNT(w)) * 100, 2) AS perc_wins
+FROM teams INNER JOIN max_wins USING (yearid)
+WHERE wswin = 'Y'
+;
+
 
 /* 8. Using the attendance figures from the homegames table, find the teams and parks which had the top 5 average attendance per game in 2016 
 	(where average attendance is defined as total attendance divided by number of games). Only consider parks where there were at least 10 games played. 
 	Report the park name, team name, and average attendance. Repeat for the lowest 5 average attendance.*/
 
 --Highest attendance per (home) game:
-SELECT park_name, teams.name, h.attendance/h.games AS att_per_game
+SELECT teams.park, teams.name, h.attendance/h.games AS att_per_game
 FROM homegames AS h LEFT JOIN teams ON h.team = teams.teamid
-					LEFT JOIN parks ON h.park = parks.park
 WHERE year = 2016
 	AND games >= 10
 	AND yearid = 2016
@@ -160,9 +190,8 @@ LIMIT 5
 ;
 
 --Lowest attendane per (home) game: 
-SELECT park_name, teams.name, h.attendance/h.games AS att_per_game
+SELECT teams.park, teams.name, h.attendance/h.games AS att_per_game
 FROM homegames AS h LEFT JOIN teams ON h.team = teams.teamid
-					LEFT JOIN parks ON h.park = parks.park
 WHERE year = 2016
 	AND games >= 10
 	AND yearid = 2016
@@ -193,11 +222,24 @@ WHERE awardid = 'TSN Manager of the Year'
 ORDER BY namelast
 ;
 
+--Alternate method from instructor to get managers who won both
+SELECT DISTINCT namefirst, namelast, awardid, awardsmanagers.lgid, name
+FROM awardsmanagers INNER JOIN managers USING (playerid, yearid)
+					INNER JOIN people USING (playerid)
+					INNER JOIN teams USING (teamid, yearid)
+WHERE playerid IN (SELECT playerid FROM awardsmanagers
+					WHERE awardid = 'TSN Manager of the Year'
+						AND lgid IN ('AL', 'NL')
+					GROUP BY playerid
+					HAVING COUNT(DISTINCT awardsmanagers.lgid) = 2)
+	AND awardid = 'TSN Manager of the Year'
+;
+
 
 -- 10. Find all players who hit their career highest number of home runs in 2016. Consider only players who have played in the league for at least 10 years, 
 	-- and who hit at least one home run in 2016. Report the players' first and last names and the number of home runs they hit in 2016.
 
-SELECT playerid, namefirst, namelast, hr AS hr_2016
+SELECT namefirst, namelast, hr AS hr_2016
 FROM batting AS b1 
 	LEFT JOIN 
 		-- the count of years each player appeared in the major leagues
@@ -223,7 +265,7 @@ career_length AS
 	FROM appearances
 	GROUP BY playerid)
 
-SELECT playerid, namefirst, namelast, hr AS hr_2016
+SELECT namefirst, namelast, hr AS hr_2016
 FROM hr_records LEFT JOIN career_length USING(playerid)
 				LEFT JOIN people USING(playerid)
 WHERE hr_rank = 1
